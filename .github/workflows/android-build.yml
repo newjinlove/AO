@@ -25,7 +25,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Build Debug APK
-      run: gradle assembleDebug --stacktrace
+      run: gradle assembleDebug --no-daemon -Dksp.incremental=false --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
