@@ -1,0 +1,6 @@
+{
+  "name": "에이오",
+  "description": "지역 기반 모금 및 중고거래 정치·경제 공동체 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
