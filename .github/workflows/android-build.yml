@@ -21,13 +21,13 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle 8.10.2
+    - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        gradle-version: '8.10.2'
+        gradle-version: '9.3.1'
 
     - name: Build Debug APK
-      run: gradle assembleDebug -Dkotlin.compiler.execution.strategy=daemon --no-configuration-cache --stacktrace
+      run: gradle assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
