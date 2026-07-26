@@ -1,11 +1,17 @@
 package com.example.ui.screens
 
+import com.example.util.AquaWalletUtil
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,9 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -30,8 +38,12 @@ import com.example.ui.viewmodel.AeoViewModel
 @Composable
 fun ProfileScreen(viewModel: AeoViewModel) {
     val currentUser by viewModel.currentUser.collectAsState()
+    val myFundings by viewModel.myFundings.collectAsState()
+    val myMarketplaceItems by viewModel.myMarketplaceItems.collectAsState()
+    val myFeedPosts by viewModel.myFeedPosts.collectAsState()
 
     var showWalletModal by remember { mutableStateOf(false) }
+    var selectedActivityTab by remember { mutableStateOf(0) } // 0: 모금, 1: 거래, 2: 피드
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -41,7 +53,7 @@ fun ProfileScreen(viewModel: AeoViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // User Profile Header Card
             item {
@@ -98,7 +110,7 @@ fun ProfileScreen(viewModel: AeoViewModel) {
 
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = currentUser?.bio ?: "역삼동 지역공동체 기획자 | DID & Decentralized Governance",
+                            text = currentUser?.bio?.replace("DID & ", "") ?: "역삼동 지역공동체 기획자 | AO Decentralized Governance",
                             fontSize = 13.sp,
                             color = Color(0xFF1A1C1E)
                         )
@@ -106,8 +118,9 @@ fun ProfileScreen(viewModel: AeoViewModel) {
                 }
             }
 
-            // MetaMask DID Status Card
+            // Aqua Wallet Status Card
             item {
+                val context = LocalContext.current
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(24.dp),
@@ -123,142 +136,178 @@ fun ProfileScreen(viewModel: AeoViewModel) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = MonoMetaMaskGold)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("메타마스크 DID 연동됨", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Column {
+                                    Text("Aqua Wallet 연동됨", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text("Bitcoin & Liquid Network", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                                }
                             }
 
-                            Button(
-                                onClick = { showWalletModal = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("지갑 상세", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            }
+                            Text(
+                                text = "아쿠아 바로가기 ↗",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MonoMetaMaskGold,
+                                modifier = Modifier.clickable {
+                                    AquaWalletUtil.launchAquaWallet(context)
+                                }
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "DID: ${currentUser?.did ?: "did:ao:0x7a83f99b2c1d"}",
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-
-            // My Governance & Activity Summary Card
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "나의 참정권 및 모금 내역",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1C1E)
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceAround
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1F2937), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("총 모금 기여", fontSize = 11.sp, color = Color(0xFF6B7280))
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("800,000원", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Column {
+                                Text("보유 자산 (Aqua)", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                                Text("125,000 sats", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MonoMetaMaskGold, fontFamily = FontFamily.Monospace)
                             }
 
-                            Divider(modifier = Modifier.height(32.dp).width(1.dp), color = Color(0xFFE0E0E0))
-
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("보유 참정권", fontSize = 11.sp, color = Color(0xFF6B7280))
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("800,000 VP", fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Black)
-                            }
-
-                            Divider(modifier = Modifier.height(32.dp).width(1.dp), color = Color(0xFFE0E0E0))
-
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("참여 안건", fontSize = 11.sp, color = Color(0xFF6B7280))
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("12건", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            }
+                            Text(
+                                text = currentUser?.walletAddress ?: "0x7a83F99b2C1d445E81A912",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 }
             }
 
-            // Action Lists
+            // My Activity Header & Sub-Tabs
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedCard(
-                        onClick = { viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.FUNDING },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color(0xFFE0E0E0))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "나의 활동 내역",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1C1E),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White, RoundedCornerShape(16.dp))
+                            .padding(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Color.Black)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text("나의 모금 및 오픈채팅 목록", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1C1E))
-                            }
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF6B7280))
+                        FilterChip(
+                            selected = selectedActivityTab == 0,
+                            onClick = { selectedActivityTab = 0 },
+                            modifier = Modifier.weight(1f),
+                            label = {
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Text("나의 모금 (${myFundings.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = Color.White,
+                                containerColor = Color(0xFFF3F4F6),
+                                labelColor = Color(0xFF4B5563)
+                            )
+                        )
+
+                        FilterChip(
+                            selected = selectedActivityTab == 1,
+                            onClick = { selectedActivityTab = 1 },
+                            modifier = Modifier.weight(1f),
+                            label = {
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Text("나의 거래 (${myMarketplaceItems.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = Color.White,
+                                containerColor = Color(0xFFF3F4F6),
+                                labelColor = Color(0xFF4B5563)
+                            )
+                        )
+
+                        FilterChip(
+                            selected = selectedActivityTab == 2,
+                            onClick = { selectedActivityTab = 2 },
+                            modifier = Modifier.weight(1f),
+                            label = {
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Text("나의 피드 (${myFeedPosts.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = Color.White,
+                                containerColor = Color(0xFFF3F4F6),
+                                labelColor = Color(0xFF4B5563)
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Tab Content Items
+            when (selectedActivityTab) {
+                0 -> { // 나의 모금
+                    if (myFundings.isEmpty()) {
+                        item {
+                            EmptyActivityCard(text = "개설 또는 기여한 모금이 없습니다.")
+                        }
+                    } else {
+                        items(myFundings, key = { it.id }) { funding ->
+                            FundingCardItem(
+                                funding = funding,
+                                onClick = {
+                                    viewModel.selectFunding(funding.id)
+                                    viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.FUNDING
+                                },
+                                onCreatorClick = { },
+                                onDirectFund = {
+                                    viewModel.selectFunding(funding.id)
+                                    viewModel.showContributeDialog.value = true
+                                }
+                            )
                         }
                     }
-
-                    OutlinedCard(
-                        onClick = { viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.MARKETPLACE },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color(0xFFE0E0E0))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Storefront, contentDescription = null, tint = Color.Black)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text("나의 중고거래 내역", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1C1E))
-                            }
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF6B7280))
+                }
+                1 -> { // 나의 거래
+                    if (myMarketplaceItems.isEmpty()) {
+                        item {
+                            EmptyActivityCard(text = "등록한 중고거래 상품이 없습니다.")
+                        }
+                    } else {
+                        items(myMarketplaceItems, key = { it.id }) { item ->
+                            MarketplaceCardItem(
+                                item = item,
+                                onClick = {
+                                    viewModel.selectedMarketplaceItem.value = item
+                                    viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.MARKETPLACE
+                                }
+                            )
                         }
                     }
-
-                    OutlinedCard(
-                        onClick = { viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.FEED },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color(0xFFE0E0E0))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.DynamicFeed, contentDescription = null, tint = Color.Black)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text("내가 쓴 피드 글", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1C1E))
-                            }
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF6B7280))
+                }
+                2 -> { // 나의 피드
+                    if (myFeedPosts.isEmpty()) {
+                        item {
+                            EmptyActivityCard(text = "작성한 피드 글이 없습니다.")
+                        }
+                    } else {
+                        items(myFeedPosts, key = { it.id }) { post ->
+                            FeedPostCardItem(
+                                post = post,
+                                onClick = {
+                                    viewModel.selectedFeedPost.value = post
+                                    viewModel.selectedTab.value = com.example.ui.viewmodel.AeoTab.FEED
+                                },
+                                onAuthorClick = { },
+                                onToggleFollow = { }
+                            )
                         }
                     }
                 }
@@ -269,8 +318,36 @@ fun ProfileScreen(viewModel: AeoViewModel) {
     if (showWalletModal) {
         WalletModal(
             currentUser = currentUser,
-            onDismiss = { showWalletModal = false }
+            onDismiss = { showWalletModal = false },
+            onBuyCryptoClick = { viewModel.showBuyCryptoDialog.value = true }
         )
     }
 }
+
+@Composable
+fun EmptyActivityCard(text: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                color = Color(0xFF6B7280),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
 

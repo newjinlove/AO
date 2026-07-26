@@ -140,7 +140,7 @@ data class ChatMessageEntity(
     val senderName: String,
     val senderAvatar: String,
     val messageText: String,
-    val isE2EEncrypted: Boolean = true, // XMTP protocol E2E
+    val isE2EEncrypted: Boolean = true, // Nostr protocol E2E
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -148,7 +148,7 @@ data class ChatMessageEntity(
 data class ChatRoomEntity(
     @PrimaryKey val roomId: String,
     val title: String,                  // Contact name or Funding title
-    val type: String,                   // "DIRECT_XMTP", "FUNDING_OPEN_CHAT"
+    val type: String,                   // "DIRECT_NOSTR", "FUNDING_OPEN_CHAT"
     val partnerDid: String? = null,
     val fundingId: String? = null,
     val lastMessage: String = "",

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,10 +39,17 @@ import java.util.Locale
 @Composable
 fun MarketplaceScreen(viewModel: AeoViewModel) {
     val items by viewModel.marketplaceItems.collectAsState()
+    val selectedItemFromVm by viewModel.selectedMarketplaceItem.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     var showPostDialog by remember { mutableStateOf(false) }
     var selectedItemForDetail by remember { mutableStateOf<MarketplaceItemEntity?>(null) }
+
+    LaunchedEffect(selectedItemFromVm) {
+        if (selectedItemFromVm != null) {
+            selectedItemForDetail = selectedItemFromVm
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -137,7 +145,10 @@ fun MarketplaceScreen(viewModel: AeoViewModel) {
 
     if (selectedItemForDetail != null) {
         Dialog(
-            onDismissRequest = { selectedItemForDetail = null },
+            onDismissRequest = {
+                selectedItemForDetail = null
+                viewModel.selectedMarketplaceItem.value = null
+            },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false
@@ -149,7 +160,10 @@ fun MarketplaceScreen(viewModel: AeoViewModel) {
             ) {
                 MarketplacePostDetailScreen(
                     item = selectedItemForDetail!!,
-                    onBack = { selectedItemForDetail = null },
+                    onBack = {
+                        selectedItemForDetail = null
+                        viewModel.selectedMarketplaceItem.value = null
+                    },
                     onStartChat = {
                         val sellerUser = com.example.data.local.UserEntity(
                             did = selectedItemForDetail!!.sellerDid,
@@ -161,6 +175,9 @@ fun MarketplaceScreen(viewModel: AeoViewModel) {
                         )
                         viewModel.openDirectChatWith(sellerUser)
                         selectedItemForDetail = null
+                    },
+                    onSellerClick = {
+                        viewModel.showUserProfileByDid(selectedItemForDetail!!.sellerDid)
                     }
                 )
             }
@@ -236,13 +253,13 @@ fun MarketplaceCardItem(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    val btcPriceFormatted = String.format(Locale.US, "%.5f", item.price / 120000000.0)
+                    val satsPrice = (item.price * 100 / 120)
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MonoDarkCard
                     ) {
                         Text(
-                            text = "$btcPriceFormatted BTC",
+                            text = "${numberFormat.format(satsPrice)} sats",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = MonoMetaMaskGold,
@@ -284,8 +301,13 @@ fun MarketplaceCardItem(
 fun MarketplacePostDetailScreen(
     item: MarketplaceItemEntity,
     onBack: () -> Unit,
-    onStartChat: () -> Unit
+    onStartChat: () -> Unit,
+    onSellerClick: () -> Unit = {}
 ) {
+    BackHandler(enabled = true) {
+        onBack()
+    }
+
     val numberFormat = NumberFormat.getNumberInstance(Locale.KOREA)
     val btcPriceFormatted = String.format(Locale.US, "%.5f", item.price / 120000000.0)
     var isLiked by remember { mutableStateOf(false) }
@@ -352,8 +374,9 @@ fun MarketplacePostDetailScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF111827)
                         )
+                        val satsPriceDetail = (item.price * 100 / 120)
                         Text(
-                            text = "$btcPriceFormatted BTC",
+                            text = "${numberFormat.format(satsPriceDetail)} sats (Aqua Wallet P2P)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFD97706)
@@ -413,6 +436,7 @@ fun MarketplacePostDetailScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onSellerClick() }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -441,7 +465,7 @@ fun MarketplacePostDetailScreen(
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                text = "DID 검증인",
+                                text = "검증된 이웃",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF374151),
@@ -506,12 +530,12 @@ fun MarketplacePostDetailScreen(
                             color = Color(0xFF1F2937)
                         )
                         Text(
-                            text = "🤝 거래 방식: 현금 또는 BTC P2P 에스크로 결제 가능",
+                            text = "🤝 거래 방식: 현금 또는 Aqua Wallet sats / USDt P2P 에스크로 결제 가능",
                             fontSize = 12.sp,
                             color = Color(0xFF4B5563)
                         )
                         Text(
-                            text = "🛡️ AO DID 이웃 인증을 완료한 안전 거래 상대입니다.",
+                            text = "🛡️ AO 이웃 인증을 완료한 안전 거래 상대입니다.",
                             fontSize = 11.sp,
                             color = Color(0xFF6B7280)
                         )
@@ -543,6 +567,7 @@ fun CreateMarketplaceItemDialog(
     var hasPhotoAttached by remember { mutableStateOf(true) }
 
     val categories = listOf("디지털/가전", "가구/인테리어", "의류/잡화", "도서/티켓", "기타 중고")
+    val numberFormat = remember { java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA) }
     val estimatedBtc = (priceText.toLongOrNull() ?: 0L) / 120000000.0
 
     AlertDialog(
@@ -645,9 +670,10 @@ fun CreateMarketplaceItemDialog(
                     singleLine = true
                 )
 
-                if (estimatedBtc > 0) {
+                val estimatedSats = ((priceText.toLongOrNull() ?: 0L) * 100 / 120)
+                if (estimatedSats > 0) {
                     Text(
-                        text = "≈ ${String.format(Locale.US, "%.5f", estimatedBtc)} BTC (자동환산)",
+                        text = "≈ ${numberFormat.format(estimatedSats)} sats (Aqua Wallet 자동환산)",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFD97706)

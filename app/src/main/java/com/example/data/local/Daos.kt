@@ -11,6 +11,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE did = :did LIMIT 1")
     suspend fun getUser(did: String): UserEntity?
 
+    @Query("SELECT * FROM users")
+    fun getAllUsersFlow(): Flow<List<UserEntity>>
+
     @Query("SELECT * FROM users WHERE handle LIKE '%' || :query || '%' OR name LIKE '%' || :query || '%'")
     suspend fun searchUsers(query: String): List<UserEntity>
 
@@ -139,6 +142,9 @@ interface FollowDao {
 
     @Query("SELECT COUNT(*) FROM follows WHERE followerDid = :followerDid AND followingDid = :followingDid")
     fun isFollowingFlow(followerDid: String, followingDid: String): Flow<Int>
+
+    @Query("SELECT * FROM follows WHERE followerDid = :followerDid")
+    fun getFollowsForUser(followerDid: String): Flow<List<FollowEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFollow(follow: FollowEntity)

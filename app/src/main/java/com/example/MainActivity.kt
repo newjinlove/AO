@@ -38,6 +38,7 @@ fun AeoApp(viewModel: AeoViewModel = viewModel()) {
     val showWalletModal by viewModel.showWalletModal.collectAsState()
     val showBuyCryptoDialog by viewModel.showBuyCryptoDialog.collectAsState()
     val showDevDonationDialog by viewModel.showDevDonationDialog.collectAsState()
+    val selectedUserProfile by viewModel.selectedUserProfile.collectAsState()
 
     Scaffold(
         topBar = {
@@ -99,6 +100,14 @@ fun AeoApp(viewModel: AeoViewModel = viewModel()) {
         com.example.ui.components.DevDonationDialog(
             onDismiss = { viewModel.showDevDonationDialog.value = false },
             onConfirm = { net, amt -> viewModel.donateToDev(net, amt) }
+        )
+    }
+
+    if (selectedUserProfile != null) {
+        com.example.ui.components.UserProfileDialog(
+            user = selectedUserProfile!!,
+            viewModel = viewModel,
+            onDismiss = { viewModel.selectedUserProfile.value = null }
         )
     }
 }

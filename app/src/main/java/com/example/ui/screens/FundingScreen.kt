@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.util.AquaWalletUtil
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -133,6 +135,7 @@ fun FundingScreen(viewModel: AeoViewModel) {
                         FundingCardItem(
                             funding = funding,
                             onClick = { viewModel.selectFunding(funding.id) },
+                            onCreatorClick = { viewModel.showUserProfileByDid(funding.creatorDid) },
                             onDirectFund = {
                                 viewModel.selectFunding(funding.id)
                                 viewModel.showContributeDialog.value = true
@@ -176,7 +179,7 @@ fun FundingScreen(viewModel: AeoViewModel) {
                                             color = Color(0xFF1A1C1E)
                                         )
                                         Text(
-                                            text = "수익모델: 자유 후원 (BTC / ETH / TRX)",
+                                            text = "자유로운 정치적 경제공동체를 지향하는 AO는 후원으로 유지됩니다.",
                                             fontSize = 10.sp,
                                             color = Color(0xFF6B7280)
                                         )
@@ -221,7 +224,7 @@ fun FundingScreen(viewModel: AeoViewModel) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "METAMASK CONNECTED",
+                                        text = "AQUA WALLET CONNECTED",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MonoMetaMaskGold,
@@ -246,24 +249,54 @@ fun FundingScreen(viewModel: AeoViewModel) {
                                         color = Color.White.copy(alpha = 0.7f)
                                     )
 
-                                    // Money Balance Anchor Text -> Opens MetaMask on click
+                                    // Money Balance Anchor Text -> Opens Aqua Wallet on click
                                     Text(
-                                        text = "12.450 ETH (≈ 43,570,000 KRW) ↗",
+                                        text = "125,000 sats ↗",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MonoMetaMaskGold,
                                         textDecoration = TextDecoration.Underline,
                                         modifier = Modifier.clickable {
-                                            try {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://metamask.app.link"))
-                                                context.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "MetaMask 지갑 앱으로 연결합니다...", Toast.LENGTH_SHORT).show()
-                                            }
+                                            AquaWalletUtil.launchAquaWallet(context)
                                         }
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    // Footer with Margin & Email Anchor Text
+                    item {
+                        val context = LocalContext.current
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "AO 탈중앙화 자율 조직 (DAO) 생태계",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF9CA3AF)
+                            )
+                            Text(
+                                text = "contact@ao-community.org",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF6B7280),
+                                textDecoration = TextDecoration.Underline,
+                                modifier = Modifier.clickable {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:contact@ao-community.org"))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "contact@ao-community.org", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -297,6 +330,7 @@ fun FundingScreen(viewModel: AeoViewModel) {
 fun FundingCardItem(
     funding: FundingEntity,
     onClick: () -> Unit,
+    onCreatorClick: () -> Unit = {},
     onDirectFund: () -> Unit = {}
 ) {
     val progress = (funding.currentAmount.toFloat() / funding.targetAmount.toFloat()).coerceIn(0f, 1f)
@@ -319,6 +353,7 @@ fun FundingCardItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.clickable { onCreatorClick() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -343,7 +378,7 @@ fun FundingCardItem(
                             color = Color(0xFF1A1C1E)
                         )
                         Text(
-                            text = "DID 연동됨 · ${funding.location}",
+                            text = "Aqua Wallet 연동됨 · ${funding.location}",
                             fontSize = 10.sp,
                             color = Color(0xFF6B7280)
                         )
@@ -377,7 +412,7 @@ fun FundingCardItem(
                         color = Color.Black
                     )
                     Text(
-                        text = "${numberFormat.format(funding.currentAmount)} / ${numberFormat.format(funding.targetAmount)} 원",
+                        text = "${numberFormat.format(funding.currentAmount)} / ${numberFormat.format(funding.targetAmount)} sats",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -450,6 +485,10 @@ fun FundingDetailScreen(
     viewModel: AeoViewModel,
     onBack: () -> Unit
 ) {
+    BackHandler(enabled = true) {
+        onBack()
+    }
+
     var selectedDetailTab by remember { mutableStateOf(0) } // 0: Overview, 1: Open Chat, 2: Agendas, 3: Promise & Vault
     val userVotingPower by viewModel.selectedFundingUserVotingPower.collectAsState()
     val agendas by viewModel.selectedFundingAgendas.collectAsState()
@@ -536,7 +575,7 @@ fun FundingDetailScreen(
                     Text("안건게시판", modifier = Modifier.padding(vertical = 10.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Tab(selected = selectedDetailTab == 3, onClick = { selectedDetailTab = 3 }) {
-                    Text("약속&시드키", modifier = Modifier.padding(vertical = 10.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("약속", modifier = Modifier.padding(vertical = 10.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -549,7 +588,7 @@ fun FundingDetailScreen(
                 )
                 1 -> OpenChatTabContent(funding, viewModel)
                 2 -> AgendasTabContent(funding, agendas, agreedAgendas, userVotingPower, viewModel)
-                3 -> PromiseAndVaultTabContent(funding, promise, viewModel)
+                3 -> PromiseTabContent(funding, promise, viewModel)
             }
         }
     }
@@ -643,7 +682,7 @@ fun OverviewTabContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "${numberFormat.format(funding.currentAmount)}원 / ${numberFormat.format(funding.targetAmount)}원",
+                            text = "${numberFormat.format(funding.currentAmount)} sats / ${numberFormat.format(funding.targetAmount)} sats",
                             fontSize = 12.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -701,12 +740,16 @@ fun OverviewTabContent(
                     Text("🔒 탈중앙 시드구문 보관 메커니즘", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "생성된 모금 지갑의 비밀복구구문은 서버에 안전하게 암호화 보관되며, 모금 목표 달성 후 약속 현장 모임에서 참정권 과반 동의 시 방장에게 자동 전달됩니다.",
+                        text = "생성된 모금 지갑의 비밀복구구문은 서버에 안전하게 암호화 보관되며, 모금 목표 달성 후 약속 현장 모임에서 참정권(VP) 과반 동의 시 방장에게 자동 전달됩니다.",
                         fontSize = 12.sp,
                         color = Color(0xFF4B5563)
                     )
                 }
             }
+        }
+
+        item {
+            SecretVaultCard(funding = funding)
         }
     }
 }
@@ -730,7 +773,7 @@ fun OpenChatTabContent(funding: FundingEntity, viewModel: AeoViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = MonoMetaMaskGold, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("XMTP E2E 종단간 암호화 오픈채팅", fontSize = 11.sp, color = MonoTextPrimaryDark)
+                Text("Nostr Protocol 종단간 암호화 오픈채팅", fontSize = 11.sp, color = MonoTextPrimaryDark)
             }
         }
 
@@ -908,7 +951,7 @@ fun AgendaItemCard(
 
                 if (agenda.isFinalized) {
                     Surface(shape = RoundedCornerShape(8.dp), color = MonoSuccessBadge) {
-                        Text("🤝 합의됨 (Finalized)", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        Text("합의됨", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 } else if (agenda.isApprovedByCreator) {
                     Surface(shape = RoundedCornerShape(8.dp), color = MonoDarkCard) {
@@ -970,7 +1013,7 @@ fun AgendaItemCard(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = MonoDarkCard)
                     ) {
-                        Text("방장 승인 (과반 찬성 시 합의됨으로 전환)")
+                        Text("방장 승인")
                     }
                 }
             } else {
@@ -981,7 +1024,7 @@ fun AgendaItemCard(
 }
 
 @Composable
-fun PromiseAndVaultTabContent(
+fun PromiseTabContent(
     funding: FundingEntity,
     promise: PromiseEntity?,
     viewModel: AeoViewModel
@@ -1021,7 +1064,7 @@ fun PromiseAndVaultTabContent(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("자금 집행 동의 현황 (과반 동의 필요)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("자금 집행 동의 현황 (과반 VP 동의 필요)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("찬성: ${promise.yesConsensusVotes}명 / 반대: ${promise.noConsensusVotes}명 (총 ${promise.totalConsensusParticipants}명)", fontSize = 12.sp)
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -1035,67 +1078,69 @@ fun PromiseAndVaultTabContent(
                 }
             }
         }
+    }
+}
 
-        // Secret Vault Section
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MonoDarkCard),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.VpnKey, contentDescription = null, tint = MonoMetaMaskGold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("모금 풀 비밀복구구문 Vault", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MonoTextPrimaryDark)
-                }
+@Composable
+fun SecretVaultCard(funding: FundingEntity) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MonoDarkCard),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.VpnKey, contentDescription = null, tint = MonoMetaMaskGold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("모금 풀 비밀복구구문 Vault", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MonoTextPrimaryDark)
+            }
 
-                Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                if (funding.isSecretUnlocked) {
-                    Text("🔓 과반 동의 통과 완료! 3.3% 운영 수수료 자동 정산 전송 및 펀딩 시드구문 개봉되었습니다:", fontSize = 12.sp, color = MonoTextPrimaryDark)
-                    Spacer(modifier = Modifier.height(6.dp))
+            if (funding.isSecretUnlocked) {
+                Text("🔓 과반 VP 동의 절차가 완료되었습니다. AO 프로토콜 네트워크 유지보수 리워드(3.3%) 반영 후 시드구문이 개봉되었습니다:", fontSize = 12.sp, color = MonoTextPrimaryDark)
+                Spacer(modifier = Modifier.height(6.dp))
 
-                    val feeAmount = (funding.currentAmount * 0.033).toLong()
-                    val numberFormat = NumberFormat.getNumberInstance(Locale.KOREA)
+                val feeAmount = (funding.currentAmount * 0.033).toLong()
+                val numberFormat = NumberFormat.getNumberInstance(Locale.KOREA)
 
-                    Surface(
-                        color = Color(0xFF1E293B),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                text = "⚡ 서비스 운영유지보수 수수료 (3.3%) 자동 정산 내역",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF60A5FA)
-                            )
-                            Text(
-                                text = "정산 수수료: ${numberFormat.format(feeAmount)} KRW (에이오 개발자 지갑 0xAO_DEV_3300... 로 자동 전송 완료)",
-                                fontSize = 10.sp,
-                                color = Color.White.copy(alpha = 0.9f)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.Black)) {
+                Surface(
+                    color = Color(0xFF1E293B),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Text(
-                            text = funding.seedPhrase,
-                            modifier = Modifier.padding(12.dp),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            color = MonoMetaMaskGold,
-                            fontWeight = FontWeight.Bold
+                            text = "⚡ AO 프로토콜 네트워크 유지보수 리워드 (3.3%)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF60A5FA)
+                        )
+                        Text(
+                            text = "정산 리워드: ${numberFormat.format(feeAmount)} KRW (AO 검증 노드 지갑 0xAO_DEV_3300... 반영 완료)",
+                            fontSize = 10.sp,
+                            color = Color.White.copy(alpha = 0.9f)
                         )
                     }
-                } else {
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Card(colors = CardDefaults.cardColors(containerColor = Color.Black)) {
                     Text(
-                        text = "🔒 비밀복구구문은 방장에게도 현재 가려져 있습니다. 목표금액 달성 후 약속 현장 모임에서 과반수가 자금 사용에 동의하면, 서비스 운영유지보수 수수료 3.3%가 에이오 개발자 메타마스크 지갑(0xAO_DEV_3300...)으로 자동 정산 전송된 직후 방장에게 시드구문이 오픈됩니다.",
-                        fontSize = 12.sp,
-                        color = MonoTextSecondaryDark
+                        text = funding.seedPhrase,
+                        modifier = Modifier.padding(12.dp),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        color = MonoMetaMaskGold,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+            } else {
+                Text(
+                    text = "🔒 비밀복구구문은 방장에게도 안전하게 가려져 있습니다. 목표 금액 달성 후 약속 현장 모임에서 과반수의 VP가 자금 사용에 동의하면, AO 프로토콜 네트워크 유지보수 리워드(3.3%) 반영 직후 방장에게 시드구문이 오토 개봉됩니다.",
+                    fontSize = 12.sp,
+                    color = MonoTextSecondaryDark
+                )
             }
         }
     }

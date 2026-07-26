@@ -93,6 +93,8 @@ class AeoViewModel(application: Application) : AndroidViewModel(application) {
     val feedPosts: StateFlow<List<FeedPostEntity>> = repository.feedPostDao.getAllPosts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val selectedFeedPost = MutableStateFlow<FeedPostEntity?>(null)
+
     // Chat State
     val chatRooms: StateFlow<List<ChatRoomEntity>> = repository.chatDao.getAllChatRooms()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -106,9 +108,72 @@ class AeoViewModel(application: Application) : AndroidViewModel(application) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // User Search for XMTP DM
+    // User Search for Nostr DM
     val userSearchQuery = MutableStateFlow("")
     val userSearchResults = MutableStateFlow<List<UserEntity>>(emptyList())
+
+    // All Users & Friends (Followed Users) Flow
+    val allUsers: StateFlow<List<UserEntity>> = repository.userDao.getAllUsersFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val followedUserDids: StateFlow<Set<String>> = repository.followDao.getFollowsForUser(repository.currentUserDid)
+        .map { follows -> follows.map { it.followingDid }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    // Selected User Profile State for Profile Modal
+    val selectedUserProfile = MutableStateFlow<UserEntity?>(null)
+
+    val profileFundings: StateFlow<List<FundingEntity>> = combine(fundingList, selectedUserProfile) { list, profile ->
+        if (profile == null) emptyList()
+        else list.filter { it.creatorDid == profile.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val profileMarketplaceItems: StateFlow<List<MarketplaceItemEntity>> = combine(marketplaceItems, selectedUserProfile) { list, profile ->
+        if (profile == null) emptyList()
+        else list.filter { it.sellerDid == profile.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val profileFeedPosts: StateFlow<List<FeedPostEntity>> = combine(feedPosts, selectedUserProfile) { list, profile ->
+        if (profile == null) emptyList()
+        else list.filter { it.authorDid == profile.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val myFundings: StateFlow<List<FundingEntity>> = combine(fundingList, currentUser) { list, user ->
+        if (user == null) emptyList()
+        else list.filter { it.creatorDid == user.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val myMarketplaceItems: StateFlow<List<MarketplaceItemEntity>> = combine(marketplaceItems, currentUser) { list, user ->
+        if (user == null) emptyList()
+        else list.filter { it.sellerDid == user.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val myFeedPosts: StateFlow<List<FeedPostEntity>> = combine(feedPosts, currentUser) { list, user ->
+        if (user == null) emptyList()
+        else list.filter { it.authorDid == user.did }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun showUserProfileByDid(did: String) {
+        viewModelScope.launch {
+            val user = repository.userDao.getUser(did)
+            if (user != null) {
+                selectedUserProfile.value = user
+            } else {
+                selectedUserProfile.value = UserEntity(
+                    did = did,
+                    handle = "@community_member",
+                    name = "커뮤니티 회원",
+                    bio = "AO 탈중앙 네트워크 검증 참여자",
+                    avatarUri = "img_default_avatar_1784694633189",
+                    walletAddress = "0x..."
+                )
+            }
+        }
+    }
+
+    fun showUserProfile(user: UserEntity) {
+        selectedUserProfile.value = user
+    }
 
     // UI Dialog & Sheet Visibility
     val showContributeDialog = MutableStateFlow(false)

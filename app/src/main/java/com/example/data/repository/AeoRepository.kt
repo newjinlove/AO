@@ -30,7 +30,7 @@ class AeoRepository(private val db: AppDatabase) {
                 did = currentUserDid,
                 handle = "@ao_leader",
                 name = "최민준",
-                bio = "역삼동 지역공동체 기획자 | DID & Decentralized Governance",
+                bio = "역삼동 지역공동체 기획자 | AO Decentralized Governance",
                 avatarUri = "img_default_avatar_1784694633189",
                 walletAddress = "0x7a83F99b2C1d445E81A912",
                 isConnectedMetaMask = true,
@@ -38,7 +38,7 @@ class AeoRepository(private val db: AppDatabase) {
             )
             userDao.insertUser(defaultUser)
 
-            // Seed Second User for XMTP DM testing
+            // Seed Second User for Nostr DM testing
             userDao.insertUser(
                 UserEntity(
                     did = "did:ao:0x91c4d8e20f3b",
@@ -49,6 +49,48 @@ class AeoRepository(private val db: AppDatabase) {
                     walletAddress = "0x91c4D8E20f3B774A12B8",
                     isConnectedMetaMask = true,
                     location = "서울 강남구 역삼2동"
+                )
+            )
+
+            userDao.insertUser(
+                UserEntity(
+                    did = "did:ao:0x3f12a9c48e71",
+                    handle = "@jimin_design",
+                    name = "박지민",
+                    bio = "강남 커뮤니티 디자이너 | 제로웨이스트 나눔",
+                    avatarUri = "img_default_avatar_1784694633189",
+                    walletAddress = "0x3f12A9C48E7101A299",
+                    isConnectedMetaMask = true,
+                    location = "서울 강남구 역삼1동"
+                )
+            )
+
+            userDao.insertUser(
+                UserEntity(
+                    did = "did:ao:0x88e7b1a901c2",
+                    handle = "@dohyun_tech",
+                    name = "이도현",
+                    bio = "Web3 개발자 | 탈중앙 모금 스마트계약 검증인",
+                    avatarUri = "img_default_avatar_1784694633189",
+                    walletAddress = "0x88E7B1A901C209F441",
+                    isConnectedMetaMask = true,
+                    location = "서울 강남구 논현동"
+                )
+            )
+
+            // Seed Initial Follows (Friends)
+            followDao.insertFollow(
+                FollowEntity(
+                    id = "${currentUserDid}_did:ao:0x91c4d8e20f3b",
+                    followerDid = currentUserDid,
+                    followingDid = "did:ao:0x91c4d8e20f3b"
+                )
+            )
+            followDao.insertFollow(
+                FollowEntity(
+                    id = "${currentUserDid}_did:ao:0x3f12a9c48e71",
+                    followerDid = currentUserDid,
+                    followingDid = "did:ao:0x3f12a9c48e71"
                 )
             )
 
@@ -259,7 +301,7 @@ class AeoRepository(private val db: AppDatabase) {
             val dmRoom = ChatRoomEntity(
                 roomId = "dm_did:aeo:0x7a83f99b2c1d_did:aeo:0x91c4d8e20f3b",
                 title = "김수현 (@gangnam_citizen)",
-                type = "DIRECT_XMTP",
+                type = "DIRECT_NOSTR",
                 partnerDid = "did:aeo:0x91c4d8e20f3b",
                 lastMessage = "카메라 ETH 거래 문의드립니다.",
                 lastMessageTime = System.currentTimeMillis() - 3600000L,
@@ -589,9 +631,9 @@ class AeoRepository(private val db: AppDatabase) {
             room = ChatRoomEntity(
                 roomId = roomId,
                 title = "${targetUser.name} (${targetUser.handle})",
-                type = "DIRECT_XMTP",
+                type = "DIRECT_NOSTR",
                 partnerDid = targetUser.did,
-                lastMessage = "XMTP E2E 암호화 채팅이 시작되었습니다.",
+                lastMessage = "Nostr 암호화 P2P 채팅이 시작되었습니다.",
                 lastMessageTime = System.currentTimeMillis()
             )
             chatDao.insertChatRoom(room)

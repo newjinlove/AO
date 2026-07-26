@@ -2,6 +2,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+
+    <queries>
+        <package android:name="com.jan3.aqua" />
+        <package android:name="io.aquawallet" />
+        <package android:name="io.sideswap.aqua" />
+        <package android:name="com.aquawallet" />
+        <package android:name="io.aquawallet.app" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="aqua" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bitcoin" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -39,7 +39,7 @@ fun ContributeDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "모금 코인 전송 (MetaMask)",
+                text = "모금 sats 전송 (Aqua Wallet)",
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp
             )
@@ -85,13 +85,13 @@ fun ContributeDialog(
                         Icon(
                             imageVector = Icons.Default.AccountBalanceWallet,
                             contentDescription = null,
-                            tint = MonoMetaMaskGold,
+                            tint = Color(0xFF38BDF8),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "송신 지갑: MetaMask 연동계정",
+                                text = "송신 지갑: Aqua Wallet (Liquid / Bitcoin)",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -107,7 +107,7 @@ fun ContributeDialog(
                 }
 
                 Text(
-                    text = "기여 금액 선택 (KRW 환산)",
+                    text = "기여 금액 선택 (sats)",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1C1E)
@@ -117,7 +117,14 @@ fun ContributeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("10000", "50000", "100000", "300000").forEach { preset ->
+                    listOf("10000", "50000", "100000", "500000").forEach { preset ->
+                        val presetLabel = when (preset) {
+                            "10000" -> "1만 sats"
+                            "50000" -> "5만 sats"
+                            "100000" -> "10만 sats"
+                            "500000" -> "50만 sats"
+                            else -> "$preset sats"
+                        }
                         OutlinedButton(
                             onClick = { amountText = preset },
                             modifier = Modifier.weight(1f),
@@ -129,7 +136,7 @@ fun ContributeDialog(
                             )
                         ) {
                             Text(
-                                text = "${preset.toLong() / 10000}만원",
+                                text = presetLabel,
                                 fontSize = 11.sp,
                                 fontWeight = if (amountText == preset) FontWeight.Bold else FontWeight.Normal,
                                 color = Color.Black
@@ -141,15 +148,15 @@ fun ContributeDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("직접 입력 (원)") },
+                    label = { Text("직접 입력 (sats)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    trailingIcon = { Text("원", modifier = Modifier.padding(end = 12.dp)) },
+                    trailingIcon = { Text("sats", modifier = Modifier.padding(end = 12.dp)) },
                     singleLine = true
                 )
 
                 Text(
-                    text = "🔒 모금액은 계정에 연동된 MetaMask 지갑에서 직접 전송되며, 동일 액수의 참정권(VP)과 오픈채팅 입장 권한이 부여됩니다.",
+                    text = "🔒 모금액은 계정에 연동된 Aqua Wallet에서 직접 전송되며, 동일 액수의 참정권(VP)과 오픈채팅 입장 권한이 부여됩니다.",
                     fontSize = 11.sp,
                     color = Color(0xFF6B7280)
                 )
@@ -159,12 +166,12 @@ fun ContributeDialog(
             Button(
                 onClick = {
                     val amt = amountText.toLongOrNull() ?: 50000L
-                    onConfirm(amt, "METAMASK_ETH")
+                    onConfirm(amt, "AQUA_SATS")
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("메타마스크에서 코인 전송")
+                Text("Aqua Wallet에서 sats 전송")
             }
         },
         dismissButton = {
@@ -183,7 +190,7 @@ fun CreateFundingDialog(
     var title by remember { mutableStateOf("") }
     var handle by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
-    var targetText by remember { mutableStateOf("3000000") }
+    var targetText by remember { mutableStateOf("1000000") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -214,7 +221,7 @@ fun CreateFundingDialog(
                 OutlinedTextField(
                     value = targetText,
                     onValueChange = { targetText = it },
-                    label = { Text("목표 모금액 (KRW)") },
+                    label = { Text("목표 모금액 (sats)") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -339,9 +346,17 @@ fun WalletModal(
     onDismiss: () -> Unit,
     onBuyCryptoClick: () -> Unit = {}
 ) {
+    val numberFormat = remember { java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("MetaMask DID 지갑 정보", fontWeight = FontWeight.Bold) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = MonoMetaMaskGold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Aqua Wallet 지갑 정보", fontWeight = FontWeight.Bold)
+            }
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -352,24 +367,30 @@ fun WalletModal(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("탈중앙 식별자 (DID)", fontSize = 11.sp, color = MonoTextSecondaryDark)
+                        Text("지갑 주소 (Liquid / Bitcoin)", fontSize = 11.sp, color = MonoTextSecondaryDark)
                         Text(
-                            text = currentUser?.did ?: "did:ao:0x7a83f99b2c1d",
-                            fontSize = 13.sp,
+                            text = currentUser?.walletAddress ?: "0x7a83F99b2C1d445E81A912",
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MonoTextPrimaryDark,
                             fontFamily = FontFamily.Monospace
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        Text("메타마스크 지갑 주소", fontSize = 11.sp, color = MonoTextSecondaryDark)
-                        Text(
-                            text = currentUser?.walletAddress ?: "0x7a83F99b2C1d445E81A912",
-                            fontSize = 13.sp,
-                            color = MonoTextPrimaryDark,
-                            fontFamily = FontFamily.Monospace
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                                .padding(10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("보유 비트코인 (sats)", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                Text("125,000 sats", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MonoMetaMaskGold, fontFamily = FontFamily.Monospace)
+                            }
+                        }
                     }
                 }
 
@@ -382,9 +403,9 @@ fun WalletModal(
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.CreditCard, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.CreditCard, contentDescription = null, tint = MonoMetaMaskGold, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("💳 현금/카드로 코인 구매하기 (MetaMask On-Ramp)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("💳 신용/체크카드로 sats 충전", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
                 Row(
@@ -392,8 +413,8 @@ fun WalletModal(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("네트워크", fontSize = 13.sp)
-                    Text("AO Decentralized Mesh", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("네트워크", fontSize = 12.sp, color = Color(0xFF4B5563))
+                    Text("Bitcoin & Liquid Network", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Row(
@@ -401,8 +422,8 @@ fun WalletModal(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("메시징 프로토콜", fontSize = 13.sp)
-                    Text("XMTP E2E Encrypted", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("메시징 프로토콜", fontSize = 12.sp, color = Color(0xFF4B5563))
+                    Text("Nostr Relay (NIP-04/17)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -418,11 +439,12 @@ fun BuyCryptoDialog(
     onConfirm: (amountKrw: Long) -> Unit
 ) {
     var selectedKrw by remember { mutableStateOf("50000") }
+    val numberFormat = remember { java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("메타마스크 카드 결제 코인 구매", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Aqua Wallet 카드 결제 sats 충전", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         },
         text = {
             Column(
@@ -430,13 +452,13 @@ fun BuyCryptoDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "MetaMask 자체 Fiat On-Ramp 결제 모듈(MoonPay / Transak / Ramp)을 사용해 신용/체크카드로 현금 결제하여 코인을 즉시 지갑에 충전합니다.",
+                    text = "Aqua Wallet 통합 Fiat On-Ramp 결제 모듈(MoonPay / Transak)을 통해 신용/체크카드로 sats(비트코인)를 즉시 지갑에 충전합니다.",
                     fontSize = 12.sp,
                     color = Color(0xFF6B7280)
                 )
 
                 Text(
-                    text = "구매 금액 선택 (KRW -> ETH)",
+                    text = "구매 금액 선택 (KRW -> sats)",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -473,8 +495,14 @@ fun BuyCryptoDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         val krw = selectedKrw.toLongOrNull() ?: 50000L
-                        val ethEst = String.format("%.4f", krw / 3500000.0)
-                        Text("예상 충전 수량: 약 $ethEst ETH", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        val satsEst = (krw * 100 / 120)
+                        Text(
+                            text = "예상 충전 수량: 약 ${numberFormat.format(satsEst)} sats",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text("결제 수단: 신용/체크카드 (Visa, Mastercard, Apple Pay)", fontSize = 10.sp, color = Color(0xFF6B7280))
                     }
                 }
@@ -486,10 +514,10 @@ fun BuyCryptoDialog(
                     val krw = selectedKrw.toLongOrNull() ?: 50000L
                     onConfirm(krw)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("메타마스크 카드 결제 진행")
+                Text("Aqua Wallet 카드 결제 진행")
             }
         },
         dismissButton = {
@@ -503,13 +531,12 @@ fun DevDonationDialog(
     onDismiss: () -> Unit,
     onConfirm: (network: String, amount: Double) -> Unit
 ) {
-    var selectedNetwork by remember { mutableStateOf("이더리움 네트워크") }
+    var selectedNetwork by remember { mutableStateOf("온체인 (On-Chain)") }
     var isCopied by remember { mutableStateOf(false) }
 
     val walletAddress = when (selectedNetwork) {
-        "비트코인" -> "bc1qao_dev_btc_donate_9999"
-        "트론 네트워크" -> "TAODevTrxDonateWallet7777"
-        else -> "0xAO_DEV_ETH_DONATE_8888"
+        "라이트닝 (Lightning)" -> "lnbc100u1p3sats_dev_donate_invoice_9999_lnbc1"
+        else -> "bc1qao_dev_btc_onchain_8888_bc1q_wallet"
     }
 
     AlertDialog(
@@ -523,13 +550,13 @@ fun DevDonationDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "AO 탈중앙 지배구조 및 XMTP 메시징 네트워크를 지속 개발 및 유지보수하는 개발팀을 후원합니다.",
+                    text = "AO 탈중앙 지배구조 및 Nostr 메시징/피드 프로토콜 네트워크를 지속 개발 및 유지보수하는 개발팀을 후원합니다.",
                     fontSize = 12.sp,
                     color = Color(0xFF6B7280)
                 )
 
                 Text(
-                    text = "후원 네트워크 선택",
+                    text = "후원 방식 선택 (Bitcoin)",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -539,7 +566,7 @@ fun DevDonationDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("비트코인", "이더리움 네트워크", "트론 네트워크").forEach { net ->
+                    listOf("온체인 (On-Chain)", "라이트닝 (Lightning)").forEach { net ->
                         val isSelected = selectedNetwork == net
                         OutlinedButton(
                             onClick = {
@@ -559,7 +586,7 @@ fun DevDonationDialog(
                         ) {
                             Text(
                                 text = net,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) Color.White else Color.Black
                             )
@@ -577,7 +604,7 @@ fun DevDonationDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "$selectedNetwork 지갑 주소",
+                            text = if (selectedNetwork.contains("라이트닝")) "비트코인 라이트닝 인보이스" else "비트코인 온체인 지갑 주소",
                             fontSize = 10.sp,
                             color = Color.White.copy(alpha = 0.7f)
                         )
@@ -610,7 +637,7 @@ fun DevDonationDialog(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isCopied) "복사 완료!" else "주소 복사",
+                                    text = if (isCopied) "복사 완료!" else if (selectedNetwork.contains("라이트닝")) "인보이스 복사" else "주소 복사",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black

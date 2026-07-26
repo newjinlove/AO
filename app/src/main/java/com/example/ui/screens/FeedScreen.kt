@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,8 +38,25 @@ import com.example.ui.viewmodel.AeoViewModel
 @Composable
 fun FeedScreen(viewModel: AeoViewModel) {
     val posts by viewModel.feedPosts.collectAsState()
+    val selectedPostFromVm by viewModel.selectedFeedPost.collectAsState()
+    val followedDids by viewModel.followedUserDids.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+
+    var feedSubTab by remember { mutableStateOf(0) } // 0: 지역 피드, 1: 친구 피드
     var showCreatePostDialog by remember { mutableStateOf(false) }
     var selectedPostForDetail by remember { mutableStateOf<FeedPostEntity?>(null) }
+
+    LaunchedEffect(selectedPostFromVm) {
+        if (selectedPostFromVm != null) {
+            selectedPostForDetail = selectedPostFromVm
+        }
+    }
+
+    val friendPosts = remember(posts, followedDids, currentUser) {
+        posts.filter { followedDids.contains(it.authorDid) || it.authorDid == currentUser?.did }
+    }
+
+    val displayPosts = if (feedSubTab == 1) friendPosts else posts
 
     Scaffold(
         floatingActionButton = {
@@ -54,26 +72,104 @@ fun FeedScreen(viewModel: AeoViewModel) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = Color(0xFFF2F2F2)
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding)
         ) {
-            items(posts, key = { it.id }) { post ->
-                FeedPostCardItem(
-                    post = post,
-                    onClick = { selectedPostForDetail = post },
-                    onToggleFollow = { viewModel.toggleFollowUser(post.authorDid) }
+            // Category Sub-Tabs Header (지역 피드 / 친구 피드)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = feedSubTab == 0,
+                    onClick = { feedSubTab = 0 },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("지역 피드", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color.Black,
+                        selectedLabelColor = Color.White,
+                        containerColor = Color(0xFFE5E7EB),
+                        labelColor = Color(0xFF374151)
+                    )
                 )
+
+                FilterChip(
+                    selected = feedSubTab == 1,
+                    onClick = { feedSubTab = 1 },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.People, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("친구 피드 (${friendPosts.size})", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color.Black,
+                        selectedLabelColor = Color.White,
+                        containerColor = Color(0xFFE5E7EB),
+                        labelColor = Color(0xFF374151)
+                    )
+                )
+            }
+
+            if (feedSubTab == 1 && friendPosts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.PeopleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = Color(0xFF9CA3AF)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "아직 등록된 친구의 피드 글이 없습니다.\n사용자 프로필에서 친구를 추가해보세요!",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(displayPosts, key = { it.id }) { post ->
+                        FeedPostCardItem(
+                            post = post,
+                            onClick = { selectedPostForDetail = post },
+                            onAuthorClick = { viewModel.showUserProfileByDid(post.authorDid) },
+                            onToggleFollow = { viewModel.toggleFollowUser(post.authorDid) }
+                        )
+                    }
+                }
             }
         }
     }
 
     if (selectedPostForDetail != null) {
         Dialog(
-            onDismissRequest = { selectedPostForDetail = null },
+            onDismissRequest = {
+                selectedPostForDetail = null
+                viewModel.selectedFeedPost.value = null
+            },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false
@@ -85,7 +181,13 @@ fun FeedScreen(viewModel: AeoViewModel) {
             ) {
                 FeedPostDetailScreen(
                     post = selectedPostForDetail!!,
-                    onBack = { selectedPostForDetail = null }
+                    onBack = {
+                        selectedPostForDetail = null
+                        viewModel.selectedFeedPost.value = null
+                    },
+                    onAuthorClick = {
+                        viewModel.showUserProfileByDid(selectedPostForDetail!!.authorDid)
+                    }
                 )
             }
         }
@@ -106,6 +208,7 @@ fun FeedScreen(viewModel: AeoViewModel) {
 fun FeedPostCardItem(
     post: FeedPostEntity,
     onClick: () -> Unit,
+    onAuthorClick: () -> Unit = {},
     onToggleFollow: () -> Unit
 ) {
     Card(
@@ -125,6 +228,7 @@ fun FeedPostCardItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.clickable { onAuthorClick() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -149,7 +253,7 @@ fun FeedPostCardItem(
                             color = Color(0xFF1A1C1E)
                         )
                         Text(
-                            text = "${post.authorHandle} · DID 인증됨",
+                            text = "${post.authorHandle} · 인증됨",
                             fontSize = 11.sp,
                             color = Color(0xFF6B7280)
                         )
@@ -232,8 +336,13 @@ fun FeedPostCardItem(
 @Composable
 fun FeedPostDetailScreen(
     post: FeedPostEntity,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAuthorClick: () -> Unit = {}
 ) {
+    BackHandler(enabled = true) {
+        onBack()
+    }
+
     var isLiked by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     val comments = remember {
@@ -328,7 +437,7 @@ fun FeedPostDetailScreen(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(post.authorName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF111827))
-                    Text("${post.authorHandle} · DID 검증됨 · 10분 전", fontSize = 12.sp, color = Color(0xFF6B7280))
+                    Text("${post.authorHandle} · AO 인증 · 10분 전", fontSize = 12.sp, color = Color(0xFF6B7280))
                 }
             }
 
